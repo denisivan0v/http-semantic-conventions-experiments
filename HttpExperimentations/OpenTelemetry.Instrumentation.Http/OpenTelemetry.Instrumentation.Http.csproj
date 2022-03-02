@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <Description>Http instrumentation for OpenTelemetry .NET</Description>
+    <PackageTags>$(PackageTags);distributed-tracing</PackageTags>
+    <IncludeDiagnosticSourceInstrumentationHelpers>true</IncludeDiagnosticSourceInstrumentationHelpers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\OpenTelemetry.Api\Internal\Guard.cs" Link="Includes\Guard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenTelemetry\OpenTelemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\OpenTelemetry\Internal\ActivityInstrumentationHelper.cs" Link="Includes\ActivityInstrumentationHelper.cs" />
+    <Compile Include="..\OpenTelemetry\DiagnosticSourceInstrumentation\DiagnosticSourceListener.cs" Link="Includes\DiagnosticSourceListener.cs" />
+    <Compile Include="..\OpenTelemetry\DiagnosticSourceInstrumentation\DiagnosticSourceSubscriber.cs" Link="Includes\DiagnosticSourceSubscriber.cs" />
+    <Compile Include="..\OpenTelemetry\DiagnosticSourceInstrumentation\InstrumentationEventSource.cs" Link="Includes\InstrumentationEventSource.cs" />
+    <Compile Include="..\OpenTelemetry\DiagnosticSourceInstrumentation\ListenerHandler.cs" Link="Includes\ListenerHandler.cs" />
+    <Compile Include="..\OpenTelemetry\DiagnosticSourceInstrumentation\PropertyFetcher.cs" Link="Includes\PropertyFetcher.cs" />
+
+    <Compile Include="..\OpenTelemetry.Api\Internal\ActivityHelperExtensions.cs" Link="Includes\ActivityHelperExtensions.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\EnumerationHelper.cs" Link="Includes\EnumerationHelper.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\ExceptionExtensions.cs" Link="Includes\ExceptionExtensions.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\IActivityEnumerator.cs" Link="Includes\IActivityEnumerator.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\SemanticConventions.cs" Link="Includes\SemanticConventions.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\SpanAttributeConstants.cs" Link="Includes\SpanAttributeConstants.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\SpanHelper.cs" Link="Includes\SpanHelper.cs" />
+    <Compile Include="..\OpenTelemetry.Api\Internal\StatusHelper.cs" Link="Includes\StatusHelper.cs" />
+  </ItemGroup>
+
+</Project>

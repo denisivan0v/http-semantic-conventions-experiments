@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Description>OpenTelemetry .NET SDK</Description>
+    <!--
+    TODO: Disable this exception, and actually do document all public API.
+    -->
+    <NoWarn>$(NoWarn),1591,CS0618</NoWarn>
+    <MinVerTagPrefix>core-</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="1.4.0" />
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="[2.1.0,)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="[2.1.0,)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenTelemetry.Api\OpenTelemetry.Api.csproj" />
+  </ItemGroup>
+
+</Project>
