@@ -29,9 +29,9 @@ namespace OpenTelemetry.Instrumentation.Http
         /// Initializes a new instance of the <see cref="HttpClientInstrumentation"/> class.
         /// </summary>
         /// <param name="options">Configuration options for HTTP client instrumentation.</param>
-        public HttpClientInstrumentation(HttpClientInstrumentationOptions options)
+        public HttpClientInstrumentation(bool useOrig, HttpClientInstrumentationOptions options)
         {
-            this.diagnosticSourceSubscriber = new DiagnosticSourceSubscriber(new HttpHandlerDiagnosticListener(options), null);
+            this.diagnosticSourceSubscriber = new DiagnosticSourceSubscriber(useOrig ? new HttpHandlerDiagnosticListenerOrig(options) : new HttpHandlerDiagnosticListener(options), null);
             this.diagnosticSourceSubscriber.Subscribe();
         }
 

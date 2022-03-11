@@ -59,6 +59,7 @@ namespace OpenTelemetry.Trace
         /// <returns>The instance of <see cref="TracerProviderBuilder"/> to chain the calls.</returns>
         public static TracerProviderBuilder AddHttpClientInstrumentation(
             this TracerProviderBuilder builder,
+            bool useOrig = false,
             Action<HttpClientInstrumentationOptions> configureHttpClientInstrumentationOptions = null)
         {
             Guard.Null(builder, nameof(builder));
@@ -67,7 +68,7 @@ namespace OpenTelemetry.Trace
 
             configureHttpClientInstrumentationOptions?.Invoke(httpClientOptions);
 
-            builder.AddInstrumentation(() => new HttpClientInstrumentation(httpClientOptions));
+            builder.AddInstrumentation(() => new HttpClientInstrumentation(useOrig, httpClientOptions));
             builder.AddSource(HttpHandlerDiagnosticListener.ActivitySourceName);
             builder.AddLegacySource("System.Net.Http.HttpRequestOut");
 
