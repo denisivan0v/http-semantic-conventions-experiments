@@ -122,7 +122,8 @@ namespace HttpClientApp
                     async () =>
                     {
                         using var source = new ActivitySource("Samples.SampleClient");
-                        using var client = new HttpClient(new SimpleRetryHandler(new HttpClientHandler()));
+                        //using var client = new HttpClient(new SimpleRetryHandler(new HttpClientHandler()));
+                        using var client = new HttpClient();
                         
                         //while (!cancellationToken.IsCancellationRequested)
                         {
@@ -130,7 +131,10 @@ namespace HttpClientApp
 
                             var content = new StringContent($"client message: {DateTime.Now}", Encoding.UTF8);
                             
-                            using var response = await client.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
+                            // using var response = await client.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
+                            using var response1 = await client.PostAsync($"{url}/1", content, cancellationToken).ConfigureAwait(false);
+                            using var response2 = await client.PostAsync($"{url}/2", content, cancellationToken).ConfigureAwait(false);
+                            using var response3 = await client.PostAsync($"{url}/3", content, cancellationToken).ConfigureAwait(false);
                         }
 
                         try

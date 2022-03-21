@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
@@ -39,6 +40,8 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
 
         private const string RestartedActivityKey = "dotnet.restarted_activity";
         private const string PreviousContextKey = "otel.previous_try_context";
+        private const string PreviousUriKey = "http.previous_try_url";
+        private const string PreviousStatusCodeKey = "http.previous_try_status_code";
         private const string RetryCountKey = "http.retry_count";
         
         private static readonly RuntimeContextSlot<Dictionary<string, object>> ScopeContextSlot = RuntimeContext.RegisterSlot<Dictionary<string, object>>("otel.scope_context");
@@ -103,28 +106,42 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             var scopeContext = ScopeContextSlot.Get();
             if (scopeContext.TryGetValue(PreviousContextKey, out var previousContext))
             {
-                // Handling request retry or redirect.
-                var retryCount = 1;
-                if (scopeContext.TryGetValue(RetryCountKey, out var previousRetryCount))
-                {
-                    retryCount = (int)previousRetryCount + 1;
-                }
-
-                // Suppressing activity started by HttpClient DiagnosticsHandler.
-                activity.IsAllDataRequested = false;
-                activity.Dispose();
-
-                activity = ActivitySource.StartActivity(activity.Kind, links: new[] { new ActivityLink((ActivityContext)previousContext) });
-                Activity.Current = activity;
+                var isRetry = scopeContext.TryGetValue(PreviousUriKey, out var previousUri) &&
+                              ((Uri) previousUri).Equals(request.RequestUri);
                 
-                scopeContext[RestartedActivityKey] = activity;
+                var isRedirect = scopeContext.TryGetValue(PreviousStatusCodeKey, out var previousStatusCode) &&
+                                 (HttpStatusCode) previousStatusCode is
+                                 HttpStatusCode.Moved or
+                                 HttpStatusCode.Redirect or
+                                 HttpStatusCode.TemporaryRedirect or
+                                 HttpStatusCode.PermanentRedirect;
+                                 
+                if (isRetry || isRedirect)
+                {
+                    // Handling request retry or redirect.
+                    var retryCount = 1;
+                    if (scopeContext.TryGetValue(RetryCountKey, out var previousRetryCount))
+                    {
+                        retryCount = (int)previousRetryCount + 1;
+                    }
 
-                activity.SetTag(RetryCountKey, retryCount);
-                scopeContext[RetryCountKey] = retryCount;
+                    // Suppressing activity started by HttpClient DiagnosticsHandler.
+                    activity.IsAllDataRequested = false;
+                    activity.Dispose();
+
+                    activity = ActivitySource.StartActivity(activity.Kind, links: new[] { new ActivityLink((ActivityContext)previousContext) });
+                    Activity.Current = activity;
+                
+                    scopeContext[RestartedActivityKey] = activity;
+
+                    activity.SetTag(RetryCountKey, retryCount);
+                    scopeContext[RetryCountKey] = retryCount;
+                }
             }
 
-            // Store activity context for the next possible try.
+            // Store activity context and URI for the next possible try.
             scopeContext[PreviousContextKey] = activity.Context;
+            scopeContext[PreviousUriKey] = request.RequestUri;
 
             // Propagate context irrespective of sampling decision
             var textMapPropagator = Propagators.DefaultTextMapPropagator;
@@ -215,6 +232,9 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
                     {
                         activity.SetStatus(SpanHelper.ResolveSpanStatusForHttpStatusCode((int)response.StatusCode));
                     }
+
+                    var scopeContext = ScopeContextSlot.Get();
+                    scopeContext[PreviousStatusCodeKey] = response.StatusCode;
 
                     try
                     {
