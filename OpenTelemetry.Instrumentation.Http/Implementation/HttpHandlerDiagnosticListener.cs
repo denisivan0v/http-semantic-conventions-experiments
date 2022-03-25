@@ -36,13 +36,7 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
         internal static readonly string ActivitySourceName = AssemblyName.Name;
         internal static readonly Version Version = AssemblyName.Version;
         internal static readonly ActivitySource ActivitySource = new ActivitySource(ActivitySourceName, Version.ToString());
-
-        private const string RestartedActivityKey = "dotnet.restarted_activity";
-        private const string PreviousContextKey = "otel.previous_try_context";
-        private const string RetryCountKey = "http.retry_count";
         
-        private static readonly RuntimeContextSlot<Dictionary<string, object>> ScopeContextSlot = RuntimeContext.RegisterSlot<Dictionary<string, object>>("otel.scope_context");
-
         private static readonly Regex CoreAppMajorVersionCheckRegex = new Regex("^\\.NETCoreApp,Version=v(\\d+)\\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private readonly PropertyFetcher<HttpRequestMessage> startRequestFetcher = new PropertyFetcher<HttpRequestMessage>("Request");
@@ -72,8 +66,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             }
 
             this.options = options;
-            
-            ScopeContextSlot.Set(new Dictionary<string, object>());
         }
 
         public override void OnStartActivity(Activity activity, object payload)
@@ -98,33 +90,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
                 HttpInstrumentationEventSource.Log.NullPayload(nameof(HttpHandlerDiagnosticListener), nameof(this.OnStartActivity));
                 return;
             }
-            
-            // The following code is now part of https://github.com/open-telemetry/opentelemetry-dotnet/pull/2756
-            var scopeContext = ScopeContextSlot.Get();
-            if (scopeContext.TryGetValue(PreviousContextKey, out var previousContext))
-            {
-                // Handling request retry or redirect.
-                var retryCount = 1;
-                if (scopeContext.TryGetValue(RetryCountKey, out var previousRetryCount))
-                {
-                    retryCount = (int)previousRetryCount + 1;
-                }
-
-                // Suppressing activity started by HttpClient DiagnosticsHandler.
-                activity.IsAllDataRequested = false;
-                activity.Dispose();
-
-                activity = ActivitySource.StartActivity(activity.Kind, links: new[] { new ActivityLink((ActivityContext)previousContext) });
-                Activity.Current = activity;
-                
-                scopeContext[RestartedActivityKey] = activity;
-
-                activity.SetTag(RetryCountKey, retryCount);
-                scopeContext[RetryCountKey] = retryCount;
-            }
-
-            // Store activity context for the next possible try.
-            scopeContext[PreviousContextKey] = activity.Context;
 
             // Propagate context irrespective of sampling decision
             var textMapPropagator = Propagators.DefaultTextMapPropagator;
@@ -223,19 +188,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
                     catch (Exception ex)
                     {
                         HttpInstrumentationEventSource.Log.EnrichmentException(ex);
-                    }
-                }
-                
-                // The following code is now part of https://github.com/open-telemetry/opentelemetry-dotnet/pull/2756
-                if (this.stopRequestFetcher.TryFetch(payload, out HttpRequestMessage request) && request != null)
-                {
-                    var scopeContext = ScopeContextSlot.Get();
-                    if (scopeContext.TryGetValue(RestartedActivityKey, out var restartedActivityInstance))
-                    {
-                        var restartedActivity = (Activity)restartedActivityInstance;
-                        restartedActivity.Stop();
-
-                        scopeContext.Remove(RestartedActivityKey);
                     }
                 }
             }
