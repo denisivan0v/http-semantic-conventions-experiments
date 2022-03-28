@@ -40,7 +40,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
         private static readonly Regex CoreAppMajorVersionCheckRegex = new Regex("^\\.NETCoreApp,Version=v(\\d+)\\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private readonly PropertyFetcher<HttpRequestMessage> startRequestFetcher = new PropertyFetcher<HttpRequestMessage>("Request");
-        private readonly PropertyFetcher<HttpRequestMessage> stopRequestFetcher = new PropertyFetcher<HttpRequestMessage>("Request");
         private readonly PropertyFetcher<HttpResponseMessage> stopResponseFetcher = new PropertyFetcher<HttpResponseMessage>("Response");
         private readonly PropertyFetcher<Exception> stopExceptionFetcher = new PropertyFetcher<Exception>("Exception");
         private readonly PropertyFetcher<TaskStatus> stopRequestStatusFetcher = new PropertyFetcher<TaskStatus>("RequestTaskStatus");
