@@ -129,7 +129,8 @@ namespace HttpClientApp
                     async () =>
                     {
                         using var source = new ActivitySource("Samples.SampleClient");
-                        using var client = new HttpClient();
+                        //using var client = new HttpClient(new DiagnosticsHandler(new SocketsHttpHandler(), "OriginalHttpHandlerDiagnosticListener"));
+                        using var client = new HttpClient(new DiagnosticsHandler(new SocketsHttpHandler(), "ImprovedHttpHandlerDiagnosticListener"));
                         
                         //while (!cancellationToken.IsCancellationRequested)
                         {

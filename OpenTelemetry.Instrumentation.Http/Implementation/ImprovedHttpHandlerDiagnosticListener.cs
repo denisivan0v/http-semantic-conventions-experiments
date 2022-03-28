@@ -15,7 +15,6 @@
 // </copyright>
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
@@ -24,16 +23,15 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using OpenTelemetry.Context;
 using OpenTelemetry.Context.Propagation;
 using OpenTelemetry.Trace;
 
 namespace OpenTelemetry.Instrumentation.Http.Implementation
 {
-    internal sealed class HttpHandlerDiagnosticListener : ListenerHandler
+    internal sealed class ImprovedHttpHandlerDiagnosticListener : ListenerHandler
     {
-        internal static readonly AssemblyName AssemblyName = typeof(HttpHandlerDiagnosticListener).Assembly.GetName();
-        internal static readonly string ActivitySourceName = AssemblyName.Name;
+        internal static readonly AssemblyName AssemblyName = typeof(ImprovedHttpHandlerDiagnosticListener).Assembly.GetName();
+        internal static readonly string ActivitySourceName = $"{AssemblyName.Name}_{nameof(ImprovedHttpHandlerDiagnosticListener)}";
         internal static readonly Version Version = AssemblyName.Version;
         internal static readonly ActivitySource ActivitySource = new ActivitySource(ActivitySourceName, Version.ToString());
         
@@ -46,8 +44,8 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
         private readonly bool httpClientSupportsW3C;
         private readonly HttpClientInstrumentationOptions options;
         
-        public HttpHandlerDiagnosticListener(HttpClientInstrumentationOptions options)
-            : base("HttpHandlerDiagnosticListener")
+        public ImprovedHttpHandlerDiagnosticListener(HttpClientInstrumentationOptions options)
+            : base("ImprovedHttpHandlerDiagnosticListener")
         {
             var framework = Assembly
                 .GetEntryAssembly()?
@@ -86,7 +84,7 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
 
             if (!this.startRequestFetcher.TryFetch(payload, out HttpRequestMessage request) || request == null)
             {
-                HttpInstrumentationEventSource.Log.NullPayload(nameof(HttpHandlerDiagnosticListener), nameof(this.OnStartActivity));
+                HttpInstrumentationEventSource.Log.NullPayload(nameof(ImprovedHttpHandlerDiagnosticListener), nameof(this.OnStartActivity));
                 return;
             }
 
@@ -94,7 +92,7 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             var textMapPropagator = Propagators.DefaultTextMapPropagator;
             if (!(this.httpClientSupportsW3C && textMapPropagator is TraceContextPropagator))
             {
-                textMapPropagator.Inject(new PropagationContext(activity.Context, Baggage.Current), request, HttpRequestMessageContextPropagation.HeaderValueSetter);
+                textMapPropagator.Inject(new PropagationContext(activity.Context, Baggage.Current), request, HttpRequestMessageContextPropagation.ImprovedHeaderValueSetter);
             }
 
             // enrich Activity from payload only if sampling decision
@@ -198,7 +196,7 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             {
                 if (!this.stopExceptionFetcher.TryFetch(payload, out Exception exc) || exc == null)
                 {
-                    HttpInstrumentationEventSource.Log.NullPayload(nameof(HttpHandlerDiagnosticListener), nameof(this.OnException));
+                    HttpInstrumentationEventSource.Log.NullPayload(nameof(ImprovedHttpHandlerDiagnosticListener), nameof(this.OnException));
                     return;
                 }
 

@@ -32,13 +32,14 @@ namespace OpenTelemetry.Instrumentation.Http
             return null;
         };
 
-        internal static Action<HttpRequestMessage, string, string> HeaderValueSetter => (request, name, value) =>
+        internal static Action<HttpRequestMessage, string, string> OriginalHeaderValueSetter => (request, name, value) =>
         {
-            if (request.Headers.Contains(name))
-            {
-                request.Headers.Remove(name);
-            }
-            
+            request.Headers.Add(name, value);
+        };
+        
+        internal static Action<HttpRequestMessage, string, string> ImprovedHeaderValueSetter => (request, name, value) =>
+        {
+            request.Headers.Remove(name);
             request.Headers.Add(name, value);
         };
     }

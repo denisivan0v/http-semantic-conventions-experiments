@@ -41,7 +41,8 @@ namespace HttpClientApp
             // and use the Jaeger exporter.
             using var openTelemetry = Sdk.CreateTracerProviderBuilder()
                     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("dotnet-app"))
-                    .AddHttpClientInstrumentation()
+                    //.AddOriginalHttpClientInstrumentation()
+                    .AddImprovedHttpClientInstrumentation()
                     .AddSource("Samples.SampleClient", "Samples.SampleServer")
                     .AddJaegerExporter(o =>
                     {
@@ -61,8 +62,8 @@ namespace HttpClientApp
             // The above lines are required only in Applications
             // which decide to use OpenTelemetry.
 
-            using (var sample = new InstrumentationWithActivitySource())
-            //using (var sample = new InstrumentationWithActivitySourceAndPolly())
+            //using (var sample = new InstrumentationWithActivitySource())
+            using (var sample = new InstrumentationWithActivitySourceAndPolly())
             { 
                 sample.Start();
 
