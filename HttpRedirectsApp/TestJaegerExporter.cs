@@ -40,7 +40,7 @@ namespace HttpRedirectsApp
             // and use the Jaeger exporter.
             using var openTelemetry = Sdk.CreateTracerProviderBuilder()
                     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("dotnet-app"))
-                    .AddHttpClientInstrumentation()
+                    .AddImprovedHttpClientInstrumentation()
                     .AddSource("Samples.SampleClient", "Samples.SampleServer")
                     .AddJaegerExporter(o =>
                     {

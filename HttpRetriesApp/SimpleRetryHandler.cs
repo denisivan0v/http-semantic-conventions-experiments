@@ -24,6 +24,11 @@ namespace HttpClientApp
                 if (response.IsSuccessStatusCode) {
                     return response;
                 }
+
+                if (i != MaxRetries - 1)
+                {
+                    response.Dispose();
+                }
             }
 
             return response;

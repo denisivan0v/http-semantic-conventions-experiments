@@ -15,7 +15,6 @@
 // </copyright>
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
@@ -24,37 +23,29 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using OpenTelemetry.Context;
 using OpenTelemetry.Context.Propagation;
 using OpenTelemetry.Trace;
 
 namespace OpenTelemetry.Instrumentation.Http.Implementation
 {
-    internal sealed class HttpHandlerDiagnosticListener : ListenerHandler
+    internal sealed class ImprovedHttpHandlerDiagnosticListener : ListenerHandler
     {
-        internal static readonly AssemblyName AssemblyName = typeof(HttpHandlerDiagnosticListener).Assembly.GetName();
-        internal static readonly string ActivitySourceName = AssemblyName.Name;
+        internal static readonly AssemblyName AssemblyName = typeof(ImprovedHttpHandlerDiagnosticListener).Assembly.GetName();
+        internal static readonly string ActivitySourceName = $"{AssemblyName.Name}_{nameof(ImprovedHttpHandlerDiagnosticListener)}";
         internal static readonly Version Version = AssemblyName.Version;
         internal static readonly ActivitySource ActivitySource = new ActivitySource(ActivitySourceName, Version.ToString());
-
-        private const string RestartedActivityKey = "dotnet.restarted_activity";
-        private const string PreviousContextKey = "otel.previous_try_context";
-        private const string RetryCountKey = "http.retry_count";
         
-        private static readonly RuntimeContextSlot<Dictionary<string, object>> ScopeContextSlot = RuntimeContext.RegisterSlot<Dictionary<string, object>>("otel.scope_context");
-
         private static readonly Regex CoreAppMajorVersionCheckRegex = new Regex("^\\.NETCoreApp,Version=v(\\d+)\\.", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private readonly PropertyFetcher<HttpRequestMessage> startRequestFetcher = new PropertyFetcher<HttpRequestMessage>("Request");
-        private readonly PropertyFetcher<HttpRequestMessage> stopRequestFetcher = new PropertyFetcher<HttpRequestMessage>("Request");
         private readonly PropertyFetcher<HttpResponseMessage> stopResponseFetcher = new PropertyFetcher<HttpResponseMessage>("Response");
         private readonly PropertyFetcher<Exception> stopExceptionFetcher = new PropertyFetcher<Exception>("Exception");
         private readonly PropertyFetcher<TaskStatus> stopRequestStatusFetcher = new PropertyFetcher<TaskStatus>("RequestTaskStatus");
         private readonly bool httpClientSupportsW3C;
         private readonly HttpClientInstrumentationOptions options;
         
-        public HttpHandlerDiagnosticListener(HttpClientInstrumentationOptions options)
-            : base("HttpHandlerDiagnosticListener")
+        public ImprovedHttpHandlerDiagnosticListener(HttpClientInstrumentationOptions options)
+            : base("ImprovedHttpHandlerDiagnosticListener")
         {
             var framework = Assembly
                 .GetEntryAssembly()?
@@ -72,8 +63,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             }
 
             this.options = options;
-            
-            ScopeContextSlot.Set(new Dictionary<string, object>());
         }
 
         public override void OnStartActivity(Activity activity, object payload)
@@ -95,42 +84,15 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
 
             if (!this.startRequestFetcher.TryFetch(payload, out HttpRequestMessage request) || request == null)
             {
-                HttpInstrumentationEventSource.Log.NullPayload(nameof(HttpHandlerDiagnosticListener), nameof(this.OnStartActivity));
+                HttpInstrumentationEventSource.Log.NullPayload(nameof(ImprovedHttpHandlerDiagnosticListener), nameof(this.OnStartActivity));
                 return;
             }
-            
-            // The following code is now part of https://github.com/open-telemetry/opentelemetry-dotnet/pull/2756
-            var scopeContext = ScopeContextSlot.Get();
-            if (scopeContext.TryGetValue(PreviousContextKey, out var previousContext))
-            {
-                // Handling request retry or redirect.
-                var retryCount = 1;
-                if (scopeContext.TryGetValue(RetryCountKey, out var previousRetryCount))
-                {
-                    retryCount = (int)previousRetryCount + 1;
-                }
-
-                // Suppressing activity started by HttpClient DiagnosticsHandler.
-                activity.IsAllDataRequested = false;
-                activity.Dispose();
-
-                activity = ActivitySource.StartActivity(activity.Kind, links: new[] { new ActivityLink((ActivityContext)previousContext) });
-                Activity.Current = activity;
-                
-                scopeContext[RestartedActivityKey] = activity;
-
-                activity.SetTag(RetryCountKey, retryCount);
-                scopeContext[RetryCountKey] = retryCount;
-            }
-
-            // Store activity context for the next possible try.
-            scopeContext[PreviousContextKey] = activity.Context;
 
             // Propagate context irrespective of sampling decision
             var textMapPropagator = Propagators.DefaultTextMapPropagator;
             if (!(this.httpClientSupportsW3C && textMapPropagator is TraceContextPropagator))
             {
-                textMapPropagator.Inject(new PropagationContext(activity.Context, Baggage.Current), request, HttpRequestMessageContextPropagation.HeaderValueSetter);
+                textMapPropagator.Inject(new PropagationContext(activity.Context, Baggage.Current), request, HttpRequestMessageContextPropagation.ImprovedHeaderValueSetter);
             }
 
             // enrich Activity from payload only if sampling decision
@@ -225,19 +187,6 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
                         HttpInstrumentationEventSource.Log.EnrichmentException(ex);
                     }
                 }
-                
-                // The following code is now part of https://github.com/open-telemetry/opentelemetry-dotnet/pull/2756
-                if (this.stopRequestFetcher.TryFetch(payload, out HttpRequestMessage request) && request != null)
-                {
-                    var scopeContext = ScopeContextSlot.Get();
-                    if (scopeContext.TryGetValue(RestartedActivityKey, out var restartedActivityInstance))
-                    {
-                        var restartedActivity = (Activity)restartedActivityInstance;
-                        restartedActivity.Stop();
-
-                        scopeContext.Remove(RestartedActivityKey);
-                    }
-                }
             }
         }
 
@@ -247,7 +196,7 @@ namespace OpenTelemetry.Instrumentation.Http.Implementation
             {
                 if (!this.stopExceptionFetcher.TryFetch(payload, out Exception exc) || exc == null)
                 {
-                    HttpInstrumentationEventSource.Log.NullPayload(nameof(HttpHandlerDiagnosticListener), nameof(this.OnException));
+                    HttpInstrumentationEventSource.Log.NullPayload(nameof(ImprovedHttpHandlerDiagnosticListener), nameof(this.OnException));
                     return;
                 }
 

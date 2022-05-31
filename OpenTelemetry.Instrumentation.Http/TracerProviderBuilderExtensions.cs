@@ -57,7 +57,7 @@ namespace OpenTelemetry.Trace
         /// <param name="builder"><see cref="TracerProviderBuilder"/> being configured.</param>
         /// <param name="configureHttpClientInstrumentationOptions">HttpClient configuration options.</param>
         /// <returns>The instance of <see cref="TracerProviderBuilder"/> to chain the calls.</returns>
-        public static TracerProviderBuilder AddHttpClientInstrumentation(
+        public static TracerProviderBuilder AddOriginalHttpClientInstrumentation(
             this TracerProviderBuilder builder,
             Action<HttpClientInstrumentationOptions> configureHttpClientInstrumentationOptions = null)
         {
@@ -67,8 +67,31 @@ namespace OpenTelemetry.Trace
 
             configureHttpClientInstrumentationOptions?.Invoke(httpClientOptions);
 
-            builder.AddInstrumentation(() => new HttpClientInstrumentation(httpClientOptions));
-            builder.AddSource(HttpHandlerDiagnosticListener.ActivitySourceName);
+            builder.AddInstrumentation(() => new HttpClientInstrumentation(new OriginalHttpHandlerDiagnosticListener(httpClientOptions)));
+            builder.AddSource(OriginalHttpHandlerDiagnosticListener.ActivitySourceName);
+            builder.AddLegacySource("System.Net.Http.HttpRequestOut");
+
+            return builder;
+        }
+        
+        /// <summary>
+        /// Enables HttpClient instrumentation.
+        /// </summary>
+        /// <param name="builder"><see cref="TracerProviderBuilder"/> being configured.</param>
+        /// <param name="configureHttpClientInstrumentationOptions">HttpClient configuration options.</param>
+        /// <returns>The instance of <see cref="TracerProviderBuilder"/> to chain the calls.</returns>
+        public static TracerProviderBuilder AddImprovedHttpClientInstrumentation(
+            this TracerProviderBuilder builder,
+            Action<HttpClientInstrumentationOptions> configureHttpClientInstrumentationOptions = null)
+        {
+            Guard.Null(builder, nameof(builder));
+
+            var httpClientOptions = new HttpClientInstrumentationOptions();
+
+            configureHttpClientInstrumentationOptions?.Invoke(httpClientOptions);
+
+            builder.AddInstrumentation(() => new HttpClientInstrumentation(new ImprovedHttpHandlerDiagnosticListener(httpClientOptions)));
+            builder.AddSource(ImprovedHttpHandlerDiagnosticListener.ActivitySourceName);
             builder.AddLegacySource("System.Net.Http.HttpRequestOut");
 
             return builder;
