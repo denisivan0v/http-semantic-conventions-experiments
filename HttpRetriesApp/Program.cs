@@ -136,7 +136,7 @@ namespace HttpClientApp
             _retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .OrResult(message => !message.IsSuccessStatusCode)
-                .RetryAsync(3);                        
+                .RetryAsync(5);                        
         }
 
         [Benchmark(Baseline = true)]
